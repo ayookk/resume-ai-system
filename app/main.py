@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Import the resume router
-from app.api import resumes
+# Import routers
+from app.api import resumes, jobs
 
 app = FastAPI(
     title="AI Resume & Recruitment System",
-    description="AI-powered resume optimization and job matching platform",
-    version="0.1.0"
+    description="AI-powered resume optimization and job matching platform with hiring type detection",
+    version="0.2.0"
 )
 
 # CORS middleware
@@ -19,15 +19,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include the resume router
+# Include routers
 app.include_router(resumes.router, prefix="/api/v1/resumes", tags=["Resumes"])
+app.include_router(jobs.router, prefix="/api/v1/jobs", tags=["Jobs"])
 
 @app.get("/")
 def root():
     return {
         "message": "AI Resume & Recruitment System API",
         "status": "running",
-        "version": "0.1.0",
+        "version": "0.2.0",
+        "features": [
+            "Resume parsing and ATS scoring",
+            "Advanced hiring type detection (Active vs Pipeline)",
+            "Application strategy recommendations"
+        ],
         "docs": "http://localhost:8000/docs"
     }
 
@@ -37,4 +43,4 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
