@@ -1,20 +1,26 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Import the resume router
+from app.api import resumes
+
 app = FastAPI(
     title="AI Resume & Recruitment System",
     description="AI-powered resume optimization and job matching platform",
     version="0.1.0"
 )
 
-# CORS middleware (allows frontend to talk to backend)
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual domains
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include the resume router
+app.include_router(resumes.router, prefix="/api/v1/resumes", tags=["Resumes"])
 
 @app.get("/")
 def root():
