@@ -52,7 +52,7 @@ st.markdown("""
 st.sidebar.title("🗂️ Navigation")
 page = st.sidebar.radio(
     "Choose a feature:",
-    ["📄 Resume Analysis", "🔍 Job Analysis", "📊 View History"]
+    ["📄 Resume Analysis", "🔍 Job Analysis", "✍️ Generate Cover Letter", "📊 View History"]
 )
 
 st.sidebar.markdown("---")
@@ -282,6 +282,166 @@ elif page == "🔍 Job Analysis":
             except Exception as e:
                 st.error(f"❌ Error analyzing job: {str(e)}")
 
+elif page == "✍️ Generate Cover Letter":
+    st.markdown('<p class="main-header">✍️ AI Cover Letter Generator</p>', unsafe_allow_html=True)
+    
+    st.markdown("""
+    Generate a personalized, professional cover letter powered by AI.
+    Customize the tone and let AI craft the perfect application letter!
+    """)
+    
+    st.markdown("---")
+    
+    # Job Details
+    st.markdown("### 📋 Job Information")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        job_title = st.text_input(
+            "Job Title",
+            placeholder="e.g., Data Scientist, Software Engineer"
+        )
+    
+    with col2:
+        company_name = st.text_input(
+            "Company Name",
+            placeholder="e.g., Google, Amazon, Microsoft"
+        )
+    
+    job_description = st.text_area(
+        "Job Description",
+        height=200,
+        placeholder="Paste the job description here..."
+    )
+    
+    st.markdown("---")
+    
+    # Resume Data (simplified)
+    st.markdown("### 👤 Your Information")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        candidate_name = st.text_input(
+            "Your Name",
+            placeholder="e.g., John Doe"
+        )
+    
+    with col2:
+        tone = st.selectbox(
+            "Cover Letter Tone",
+            ["professional", "enthusiastic", "formal"],
+            help="Choose the tone that matches your personality and the company culture"
+        )
+    
+    skills_input = st.text_input(
+        "Your Top Skills (comma-separated)",
+        placeholder="e.g., Python, SQL, Machine Learning, Data Analysis"
+    )
+    
+    experience_input = st.text_area(
+        "Your Recent Experience (brief summary)",
+        height=100,
+        placeholder="e.g., Data Analyst at TechCorp (2020-2024): Led data analysis projects..."
+    )
+    
+    st.markdown("---")
+    
+    # Generate button
+    if st.button("✨ Generate Cover Letter", type="primary", use_container_width=True, 
+                 disabled=not (job_title and company_name and job_description and candidate_name)):
+        
+        with st.spinner("🤖 AI is writing your cover letter... This may take 10-15 seconds."):
+            try:
+                # Parse skills
+                skills = [s.strip() for s in skills_input.split(",") if s.strip()]
+                
+                # Parse experience
+                experience = []
+                if experience_input:
+                    experience.append({
+                        "title": "Recent Role",
+                        "company": "Previous Company",
+                        "description": experience_input
+                    })
+                
+                # Build resume data
+                resume_data = {
+                    "contact": {"name": candidate_name},
+                    "skills": skills,
+                    "experience": experience
+                }
+                
+                # Build job data
+                job_data = {
+                    "title": job_title,
+                    "company": company_name,
+                    "description": job_description
+                }
+                
+                # Call API
+                payload = {
+                    "resume_data": resume_data,
+                    "job_data": job_data,
+                    "tone": tone
+                }
+                
+                response = requests.post(f"{API_BASE_URL}/cover-letters/generate", json=payload)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    cover_letter = data['cover_letter']
+                    word_count = data['word_count']
+                    
+                    st.success("✅ Cover letter generated successfully!")
+                    
+                    # Display metrics
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Word Count", word_count)
+                    with col2:
+                        st.metric("Tone", tone.capitalize())
+                    with col3:
+                        st.metric("Status", "Ready ✅")
+                    
+                    st.markdown("---")
+                    
+                    # Display cover letter
+                    st.markdown("### 📝 Your Cover Letter")
+                    
+                    # Show in a nice box
+                    st.text_area(
+                        "Cover Letter (click to copy)",
+                        value=cover_letter,
+                        height=400,
+                        label_visibility="collapsed"
+                    )
+                    
+                    # Download button
+                    st.download_button(
+                        label="📥 Download as Text File",
+                        data=cover_letter,
+                        file_name=f"cover_letter_{company_name.replace(' ', '_').lower()}.txt",
+                        mime="text/plain",
+                        use_container_width=True
+                    )
+                    
+                    # Tips
+                    st.info("""
+                    **💡 Next Steps:**
+                    - Review and personalize the letter with specific examples
+                    - Add your contact information at the top
+                    - Include a proper salutation (Dear Hiring Manager, etc.)
+                    - Sign off with your name at the bottom
+                    """)
+                
+                else:
+                    st.error(f"❌ Error: {response.status_code} - {response.text}")
+            
+            except Exception as e:
+                st.error(f"❌ Error generating cover letter: {str(e)}") 
+                
 elif page == "📊 View History":
     st.markdown('<p class="main-header">📊 Analysis History</p>', unsafe_allow_html=True)
     

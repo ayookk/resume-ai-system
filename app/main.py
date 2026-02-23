@@ -7,7 +7,7 @@ from app.database import engine, Base
 from app.models import Resume, JobAnalysis
 
 # Import routers
-from app.api import resumes, jobs
+from app.api import resumes, jobs, cover_letters
 
 
 @asynccontextmanager
@@ -46,6 +46,7 @@ app.add_middleware(
 # Include routers
 app.include_router(resumes.router, prefix="/api/v1/resumes", tags=["Resumes"])
 app.include_router(jobs.router, prefix="/api/v1/jobs", tags=["Jobs"])
+app.include_router(cover_letters.router, prefix="/api/v1/cover-letters", tags=["Cover Letters"])
 
 
 @app.get("/")
