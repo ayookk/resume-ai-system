@@ -52,7 +52,7 @@ st.markdown("""
 st.sidebar.title("🗂️ Navigation")
 page = st.sidebar.radio(
     "Choose a feature:",
-    ["📄 Resume Analysis", "🔍 Job Analysis", "✍️ Generate Cover Letter", "📊 View History"]
+    ["📄 Resume Analysis", "🔍 Job Analysis", "✍️ Generate Cover Letter", "🎯 Job Matching", "📊 View History"]
 )
 
 st.sidebar.markdown("---")
@@ -441,6 +441,248 @@ elif page == "✍️ Generate Cover Letter":
             
             except Exception as e:
                 st.error(f"❌ Error generating cover letter: {str(e)}") 
+   
+elif page == "🎯 Job Matching":
+    st.markdown('<p class="main-header">🎯 Semantic Job Matching</p>', unsafe_allow_html=True)
+    
+    st.markdown("""
+    Find your best job matches using AI-powered semantic analysis!
+    Our system understands **meaning**, not just keywords.
+    """)
+    
+    st.markdown("---")
+    
+    # Resume input
+    st.markdown("### 📄 Your Resume")
+    
+    resume_input_method = st.radio(
+        "How would you like to provide your resume?",
+        ["Paste Resume Text", "Use Uploaded Resume"],
+        horizontal=True
+    )
+    
+    resume_text = ""
+    
+    if resume_input_method == "Paste Resume Text":
+        resume_text = st.text_area(
+            "Paste your resume text here:",
+            height=200,
+            placeholder="Copy and paste your full resume here..."
+        )
+    else:
+        # Fetch available resumes
+        try:
+            response = requests.get(f"{API_BASE_URL}/resumes/?limit=50")
+            if response.status_code == 200:
+                data = response.json()
+                resumes = data.get('resumes', [])
+                
+                if resumes:
+                    resume_options = {
+                        f"{r['original_filename']} (Score: {r['ats_score']})": r['resume_id']
+                        for r in resumes
+                    }
+                    
+                    selected = st.selectbox(
+                        "Select a previously uploaded resume:",
+                        options=list(resume_options.keys())
+                    )
+                    
+                    if selected:
+                        resume_id = resume_options[selected]
+                        # Get the full resume
+                        resume_response = requests.get(f"{API_BASE_URL}/resumes/{resume_id}")
+                        if resume_response.status_code == 200:
+                            resume_data = resume_response.json()['resume']
+                            resume_text = resume_data['parsed_data']['raw_text']
+                            st.success(f"✅ Loaded: {selected}")
+                else:
+                    st.warning("No resumes uploaded yet. Upload one in Resume Analysis first!")
+        except Exception as e:
+            st.error(f"Error loading resumes: {str(e)}")
+    
+    st.markdown("---")
+    
+    # Job input
+    st.markdown("### 💼 Job Descriptions to Match")
+    
+    matching_mode = st.radio(
+        "Matching Mode:",
+        ["Single Job", "Multiple Jobs (Ranking)"],
+        horizontal=True
+    )
+    
+    if matching_mode == "Single Job":
+        st.markdown("**Match against one job:**")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            job_title = st.text_input("Job Title", placeholder="e.g., Data Scientist")
+        with col2:
+            company = st.text_input("Company", placeholder="e.g., Google")
+        
+        job_description = st.text_area(
+            "Job Description:",
+            height=200,
+            placeholder="Paste the full job description here..."
+        )
+        
+        if st.button("🎯 Calculate Match Score", type="primary", use_container_width=True,
+                     disabled=not (resume_text and job_description)):
+            
+            with st.spinner("🔄 Analyzing semantic similarity..."):
+                try:
+                    payload = {
+                        "resume_text": resume_text,
+                        "job_description": job_description
+                    }
+                    
+                    response = requests.post(f"{API_BASE_URL}/matching/match", json=payload)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        match = data['match']
+                        
+                        st.success("✅ Match analysis complete!")
+                        
+                        # Big score display
+                        col1, col2, col3 = st.columns([2, 2, 2])
+                        
+                        with col1:
+                            st.metric(
+                                "Match Score",
+                                f"{match['match_score']}%",
+                                delta=match['match_level']
+                            )
+                        
+                        with col2:
+                            st.metric(
+                                "Match Level",
+                                match['match_level'],
+                                delta=match['color']
+                            )
+                        
+                        with col3:
+                            if match['match_score'] >= 65:
+                                st.metric("Recommendation", "Apply!", delta="✅")
+                            else:
+                                st.metric("Recommendation", "Consider", delta="⚠️")
+                        
+                        # Progress bar
+                        st.progress(match['match_score'] / 100)
+                        
+                        # Recommendation
+                        st.info(f"**💡 {match['recommendation']}**")
+                        
+                        # Additional context
+                        with st.expander("📊 Understanding Your Score"):
+                            st.markdown("""
+                            **Score Breakdown:**
+                            - **80-100%**: 🟢 Excellent Match - You're a top candidate
+                            - **65-79%**: 🟡 Good Match - Strong fit with some gaps
+                            - **50-64%**: 🟠 Fair Match - Consider skill development
+                            - **0-49%**: 🔴 Weak Match - Focus on better-aligned roles
+                            
+                            **What This Means:**
+                            Semantic matching analyzes the *meaning* of your experience vs job requirements,
+                            not just keyword matches. A high score means your background genuinely aligns
+                            with what the company needs.
+                            """)
+                    
+                    else:
+                        st.error(f"Error: {response.status_code} - {response.text}")
+                
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+    
+    else:  # Multiple jobs ranking
+        st.markdown("**Add multiple jobs to rank by match score:**")
+        
+        num_jobs = st.number_input("How many jobs to compare?", min_value=2, max_value=10, value=3)
+        
+        jobs = []
+        
+        for i in range(num_jobs):
+            with st.expander(f"Job {i+1}", expanded=(i==0)):
+                col1, col2 = st.columns(2)
+                with col1:
+                    title = st.text_input(f"Job Title {i+1}", key=f"title_{i}", placeholder="e.g., Data Scientist")
+                with col2:
+                    comp = st.text_input(f"Company {i+1}", key=f"company_{i}", placeholder="e.g., Google")
+                
+                desc = st.text_area(
+                    f"Job Description {i+1}:",
+                    key=f"desc_{i}",
+                    height=150,
+                    placeholder="Paste job description..."
+                )
+                
+                if title and comp and desc:
+                    jobs.append({
+                        "id": f"job_{i+1}",
+                        "title": title,
+                        "company": comp,
+                        "description": desc
+                    })
+        
+        if st.button("🏆 Rank Jobs by Match", type="primary", use_container_width=True,
+                     disabled=not (resume_text and len(jobs) >= 2)):
+            
+            with st.spinner(f"🔄 Ranking {len(jobs)} jobs by semantic similarity..."):
+                try:
+                    payload = {
+                        "resume_text": resume_text,
+                        "jobs": jobs
+                    }
+                    
+                    response = requests.post(f"{API_BASE_URL}/matching/match-multiple", json=payload)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        matches = data['matches']
+                        
+                        st.success(f"✅ Ranked {data['total_jobs']} jobs!")
+                        
+                        st.markdown("### 🏆 Your Best Matches (Ranked)")
+                        
+                        for i, match in enumerate(matches, 1):
+                            score = match['match_score']
+                            
+                            # Different styling based on rank
+                            if i == 1:
+                                icon = "🥇"
+                                color = "#FFD700"
+                            elif i == 2:
+                                icon = "🥈"
+                                color = "#C0C0C0"
+                            elif i == 3:
+                                icon = "🥉"
+                                color = "#CD7F32"
+                            else:
+                                icon = f"{i}."
+                                color = "#666666"
+                            
+                            with st.container():
+                                col1, col2, col3 = st.columns([1, 4, 2])
+                                
+                                with col1:
+                                    st.markdown(f"### {icon}")
+                                
+                                with col2:
+                                    st.markdown(f"**{match['job_title']}** at {match['company']}")
+                                    st.caption(match['match_level'])
+                                
+                                with col3:
+                                    st.metric("Match", f"{score}%")
+                                
+                                st.progress(score / 100)
+                                st.markdown("---")
+                    
+                    else:
+                        st.error(f"Error: {response.status_code}")
+                
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
                 
 elif page == "📊 View History":
     st.markdown('<p class="main-header">📊 Analysis History</p>', unsafe_allow_html=True)
