@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 
 # API configuration
-API_BASE_URL = "http://localhost:8000/api/v1"
+API_BASE_URL = "https://web-production-a3dad.up.railway.app/api/v1"
 
 # Page config
 st.set_page_config(
