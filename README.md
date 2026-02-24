@@ -1,3 +1,16 @@
+
+## 🌐 Live Demo
+
+**Try the app:** [https://resume-ai-system-mx95ebvcadojtnufq5gmue.streamlit.app](https://resume-ai-system-mx95ebvcadojtnufq5gmue.streamlit.app)
+
+**API Documentation:** [https://web-production-a3dad.up.railway.app/docs](https://web-production-a3dad.up.railway.app/docs)
+
+**Features:**
+- 📄 Resume ATS Scoring & Optimization
+- 🔍 Hiring Type Detection (Active vs Pipeline Jobs)
+- ✍️ AI-Powered Cover Letter Generation
+- 🎯 Semantic Job Matching with ML
+
 # 🚀 AI Resume & Recruitment Optimization System
 
 An AI-powered platform that helps job seekers optimize their resumes and identify genuine hiring opportunities vs. resume harvesting schemes.
